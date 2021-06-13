@@ -333,12 +333,19 @@ function step() {
 
 let previous_mouse_position = new Vector(0, 0);
 let dragging = false;
+let drag_timeout = null;
 
 function touch_click_start(e) {
+  mouse_down = true;
+  dragging = false;
+
+  clearTimeout(drag_timeout);
+  drag_timeout = setTimeout(() => {
+    dragging = true;
+  }, 250);
+
   e.preventDefault();
   if (e.type === "mousedown") {
-    mouse_down = true;
-    dragging = false;
     previous_mouse_position.x = e.offsetX;
     previous_mouse_position.y = e.offsetY;
     mouse_pos.x = e.offsetX;
@@ -346,8 +353,6 @@ function touch_click_start(e) {
   }
 
   if (e.type === "touchstart") {
-    mouse_down = true;
-    dragging = false;
     mouse_pos.x = e.touches[0].clientX;
     mouse_pos.y = e.touches[0].clientY;
     previous_mouse_position.x = mouse_pos.x;
@@ -357,6 +362,8 @@ function touch_click_start(e) {
 
 function touch_click_end(e) {
   e.preventDefault();
+
+  clearTimeout(drag_timeout);
 
   if (e.type === "touchend") {
     mouse_down = false;
@@ -426,16 +433,20 @@ window.addEventListener("touchend", (e) => {
 });
 
 game_canvas.addEventListener("mousemove", (e) => {
-  if (mouse_down) {
-    dragging = true;
-  } else {
-    dragging = false;
-  }
-
   if (dragging) {
     mouse_pos.x = e.offsetX;
     mouse_pos.y = e.offsetY;
     let change = previous_mouse_position.to(mouse_pos);
+    console.log(change.magnitude);
+
+    if (change.magnitude > 5) {
+      if (mouse_down) {
+        dragging = true;
+      } else {
+        dragging = false;
+      }
+    }
+
     aim_cursor = aim_cursor.add(change);
     previous_mouse_position.x = mouse_pos.x;
     previous_mouse_position.y = mouse_pos.y;
@@ -447,11 +458,16 @@ game_canvas.addEventListener("touchmove", (e) => {
   e.preventDefault();
   //console.log(e);
 
-  dragging = true;
   if (e.changedTouches.length == 1) {
     mouse_pos.x = e.changedTouches[0].clientX;
     mouse_pos.y = e.changedTouches[0].clientY;
     let change = previous_mouse_position.to(mouse_pos);
+    console.log(change.magnitude);
+
+    if (change.magnitude > 5) {
+      dragging = true;
+    }
+
     aim_cursor = aim_cursor.add(change);
     previous_mouse_position.x = mouse_pos.x;
     previous_mouse_position.y = mouse_pos.y;
