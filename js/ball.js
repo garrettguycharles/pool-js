@@ -301,13 +301,14 @@ export class Ball extends Rect {
         let to_left = this.center.to(f.left);
         let to_right = this.center.to(f.right);
         let normal = to_left.project(f.outward);
+        let intersection = this.center.add(this.velocity.scale(normal.magnitude / normal_vel.magnitude));
 
         if (normal_vel.magnitude + this.radius >= normal.magnitude) {
           // the ball may reach the face in the next step
           if (normal.acute_with(normal_vel)) {
             // the ball is moving towards the face
-            let l_to_intersection = to_left.project(faceward);
-            let r_to_intersection = to_right.project(faceward);
+            let l_to_intersection = f.left.to(intersection);
+            let r_to_intersection = f.right.to(intersection);
             if (l_to_intersection.magnitude < faceward.magnitude && r_to_intersection.magnitude < faceward.magnitude) {
               // the ball will intersect with this face on the next step.
               face = f;
