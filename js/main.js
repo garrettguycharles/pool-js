@@ -206,6 +206,13 @@ function update() {
 
   if (state == "ball_in_hand") {
     cue_ball.center = aim_cursor;
+
+    for (let i = 1; i < pool_ball_list.length; i++) {
+      cue_ball.avoid_collision_circle(pool_ball_list[i]);
+      cue_ball.stay_in_rect(table);
+    }
+
+    aim_cursor = cue_ball.center;
   }
 
   for (let i = 0; i < pool_ball_list.length; i++) {

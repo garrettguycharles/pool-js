@@ -78,7 +78,15 @@ export class Ball extends Rect {
     this.bounce_elastic_2d(other, damping, normal, set_other_velocity);
   }
 
-  move_outside_circle(other) {
+  avoid_collision_circle(other) {
+    let to_self = other.center.to(this.center);
+
+    if (to_self.magnitude < this.radius + other.radius) {
+      this.center = this.center.add(to_self.normalize().scale(this.radius + other.radius - to_self.magnitude));
+    }
+  }
+
+  move_outside_circle(other, move_this_only = false) {
     if (this.collidecircle(other)) {
       let dir = other.center.angle_to(this.center);
       let targ_dist = this.radius + other.radius;
@@ -121,6 +129,21 @@ export class Ball extends Rect {
 
 
       }
+    }
+  }
+
+  stay_in_rect(other) {
+    if (this.left < other.left) {
+      this.left = other.left;
+    }
+    if (this.top < other.top) {
+      this.top = other.top;
+    }
+    if (this.right > other.right) {
+      this.right = other.right;
+    }
+    if (this.bottom > other.bottom) {
+      this.bottom = other.bottom;
     }
   }
 
