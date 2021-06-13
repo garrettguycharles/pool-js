@@ -77,6 +77,8 @@ let table_reset_timeout = null;
 
 let state = "play";
 
+let num_balls = 9;
+
 function setup_table() {
 
   pool_ball_list = [];
@@ -124,7 +126,7 @@ function setup_table() {
   cue_ball.center = [table.left + table.w / 4, table.centery];
   pool_ball_list.push(cue_ball);
 
-  for (let i = 1; i < 10; i+=1) {
+  for (let i = 1; i <= num_balls; i+=1) {
     let r = BALL_RADIUS;
     let ball = new PoolBall(0, 0, r, i);
     ball.center = [utils.random_range(table.left, table.right), utils.random_range(table.top, table.bottom)];
@@ -316,6 +318,27 @@ function update() {
   }
 
 
+  if (state !== "game_over") {
+    let reset_table = true;
+
+    for (let i = 1; i <= num_balls; i++) {
+      if (!pool_ball_list[i].in_pocket) {
+        reset_table = false;
+        break;
+      }
+    }
+
+    if (reset_table) {
+      state = "game_over";
+      table_reset_timeout = setTimeout(() => {
+        setup_table();
+        table_reset_timeout = null;
+        state = "play";
+      }, 5000);
+    }
+  }
+
+
   let new_can_shoot = true;
   if (state === "play") {
     pool_ball_list.every((ball, i) => {
@@ -453,7 +476,7 @@ game_canvas.addEventListener("mousemove", (e) => {
     }
   }
 
-  if (dragging) {
+  if (dragging && mouse_down) {
     aim_cursor = aim_cursor.add(change);
   }
 
@@ -474,7 +497,7 @@ game_canvas.addEventListener("touchmove", (e) => {
       dragging = true;
     }
 
-    if (dragging) {
+    if (dragging && mouse_down) {
       aim_cursor = aim_cursor.add(change);
     }
 
