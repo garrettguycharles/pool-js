@@ -334,74 +334,95 @@ function step() {
 let previous_mouse_position = new Vector(0, 0);
 let dragging = false;
 
+function touch_click_start(e) {
+  e.preventDefault();
+  if (e.type === "mousedown") {
+    mouse_down = true;
+    dragging = false;
+    previous_mouse_position.x = e.offsetX;
+    previous_mouse_position.y = e.offsetY;
+    mouse_pos.x = e.offsetX;
+    mouse_pos.y = e.offsetY;
+  }
+
+  if (e.type === "touchstart") {
+    mouse_down = true;
+    dragging = false;
+    mouse_pos.x = e.touches[0].clientX;
+    mouse_pos.y = e.touches[0].clientY;
+    previous_mouse_position.x = mouse_pos.x;
+    previous_mouse_position.y = mouse_pos.y;
+  }
+}
+
+function touch_click_end(e) {
+  e.preventDefault();
+
+  if (e.type === "touchend") {
+    mouse_down = false;
+
+    if (dragging) {
+      return;
+    }
+
+    if (state === "play") {
+      if (can_shoot) {
+
+        let launch_vect = aim_cursor.subtract(cue_ball.center);
+
+        cue_ball.velocity = launch_vect.scale(1/20);
+        if (cue_ball.velocity.magnitude > MAX_LAUNCH_SPEED) {
+          cue_ball.velocity = cue_ball.velocity.scale(MAX_LAUNCH_SPEED / cue_ball.velocity.magnitude);
+        }
+        aim_cursor = table.center;
+      }
+    }
+
+    if (state === "ball_in_hand") {
+      state = "play";
+    }
+  }
+
+  if (e.type === "mouseup") {
+    mouse_down = false;
+
+    if (dragging) {
+      return;
+    }
+
+    if (state === "play") {
+      if (can_shoot) {
+
+        let launch_vect = aim_cursor.subtract(cue_ball.center);
+
+        cue_ball.velocity = launch_vect.scale(1/20);
+        if (cue_ball.velocity.magnitude > MAX_LAUNCH_SPEED) {
+          cue_ball.velocity = cue_ball.velocity.scale(MAX_LAUNCH_SPEED / cue_ball.velocity.magnitude);
+        }
+        aim_cursor = table.center;
+      }
+    }
+
+    if (state === "ball_in_hand") {
+      state = "play";
+    }
+  }
+}
+
 game_canvas.addEventListener("mousedown", (e) => {
-  mouse_down = true;
-  dragging = false;
-  previous_mouse_position.x = e.offsetX;
-  previous_mouse_position.y = e.offsetY;
-  mouse_pos.x = e.offsetX;
-  mouse_pos.y = e.offsetY;
+  touch_click_start(e);
 });
 
 game_canvas.addEventListener("touchstart", (e) => {
-  mouse_down = true;
-  dragging = false;
-  mouse_pos.x = e.touches[0].clientX;
-  mouse_pos.y = e.touches[0].clientY;
-  previous_mouse_position.x = mouse_pos.x;
-  previous_mouse_position.y = mouse_pos.y;
+  touch_click_start(e);
 });
 
 window.addEventListener("mouseup", (e) => {
-  mouse_down = false;
-
-  if (dragging) {
-    return;
-  }
-
-  if (state === "play") {
-    if (can_shoot) {
-
-      let launch_vect = aim_cursor.subtract(cue_ball.center);
-
-      cue_ball.velocity = launch_vect.scale(1/20);
-      if (cue_ball.velocity.magnitude > MAX_LAUNCH_SPEED) {
-        cue_ball.velocity = cue_ball.velocity.scale(MAX_LAUNCH_SPEED / cue_ball.velocity.magnitude);
-      }
-      aim_cursor = table.center;
-    }
-  }
-
-  if (state === "ball_in_hand") {
-    state = "play";
-  }
-
+  touch_click_end(e);
 });
 
 window.addEventListener("touchend", (e) => {
-  mouse_down = false;
-
-  if (dragging) {
-    return;
-  }
-
-  if (state === "play") {
-    if (can_shoot) {
-
-      let launch_vect = aim_cursor.subtract(cue_ball.center);
-
-      cue_ball.velocity = launch_vect.scale(1/20);
-      if (cue_ball.velocity.magnitude > MAX_LAUNCH_SPEED) {
-        cue_ball.velocity = cue_ball.velocity.scale(MAX_LAUNCH_SPEED / cue_ball.velocity.magnitude);
-      }
-      aim_cursor = table.center;
-    }
-  }
-
-  if (state === "ball_in_hand") {
-    state = "play";
-  }
-
+  touch_click_end(e);
 });
 
 game_canvas.addEventListener("mousemove", (e) => {
