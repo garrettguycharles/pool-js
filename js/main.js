@@ -207,12 +207,29 @@ function draw() {
 function update() {
 
   if (state == "ball_in_hand") {
-    cue_ball.center = aim_cursor;
-
-    for (let i = 1; i < pool_ball_list.length; i++) {
-      cue_ball.avoid_collision_circle(pool_ball_list[i]);
-      cue_ball.stay_in_rect(table);
+    let move = cue_ball.center.to(aim_cursor);
+    if (move.magnitude > cue_ball.radius) {
+      move = move.scale(cue_ball.radius / move.magnitude);
     }
+    cue_ball.center = cue_ball.center.add(move);
+
+    let colliding = true;
+
+    while (colliding) {
+      colliding = false;
+
+      for (let i = 1; i < pool_ball_list.length; i++) {
+        if (cue_ball.avoid_collision_circle(pool_ball_list[i])) {
+          colliding = true;
+        }
+
+        if (cue_ball.stay_in_rect(table)) {
+          colliding = true;
+        }
+      }
+    }
+
+
 
     aim_cursor = cue_ball.center;
   }
