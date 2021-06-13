@@ -225,6 +225,33 @@ function update() {
       ball.yspeed = 0;
     }
 
+    for (let j = 0; j < pool_ball_list.length; j++) {
+      let otherball = pool_ball_list[j];
+
+      if (ball != otherball && !otherball.in_pocket) {
+
+        let collides = ball.collidecircle(otherball);
+
+        let scale = ball.next_step_collidecircle_with(otherball);
+
+        if (scale != false) {
+          let scale_ball_vel = ball.velocity.scale(scale);
+          let scale_other_vel = otherball.velocity.scale(scale);
+          ball.center = ball.center.add(scale_ball_vel);
+          otherball.center = otherball.center.add(scale_other_vel);
+        }
+
+        if (scale != false) {
+          ball.bounce_elastic_2d(otherball, 1.1);
+        }
+
+        /*else if (collides) {
+          ball.move_outside_circle(otherball);
+          ball.bounce_elastic_2d(otherball, 1.1);
+        }*/
+      }
+    }
+
     for (let j = 0; j < pocket_list.length; j++) {
       let pocket = pocket_list[j];
 
@@ -275,33 +302,6 @@ function update() {
           bumper_list[j].bounce_ball(ball);
         }
         */
-      }
-    }
-
-    for (let j = 0; j < pool_ball_list.length; j++) {
-      let otherball = pool_ball_list[j];
-
-      if (ball != otherball && !otherball.in_pocket) {
-
-        let collides = ball.collidecircle(otherball);
-
-        let scale = ball.next_step_collidecircle_with(otherball);
-
-        if (scale != false) {
-          let scale_ball_vel = ball.velocity.scale(scale);
-          let scale_other_vel = otherball.velocity.scale(scale);
-          ball.center = ball.center.add(scale_ball_vel);
-          otherball.center = otherball.center.add(scale_other_vel);
-        }
-
-        if (scale != false) {
-          ball.bounce_elastic_2d(otherball, 1.1);
-        }
-
-        /*else if (collides) {
-          ball.move_outside_circle(otherball);
-          ball.bounce_elastic_2d(otherball, 1.1);
-        }*/
       }
     }
     //ball.yspeed += gravity;
