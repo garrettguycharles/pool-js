@@ -418,8 +418,8 @@ export class DrawTool {
 
     this.ctx.beginPath();
     this.move_to(inner_left_radius_point.coord);
-    this.line_to(left_corner.coord);
-    this.line_to(right_corner.coord);
+    this.line_to(left_corner.add(inner_left_radius_point.to(left_corner)).coord);
+    this.line_to(right_corner.add(inner_right_radius_point.to(right_corner)).coord);
     this.line_to(inner_right_radius_point.coord);
     this.ctx.closePath();
     this.ctx.fillStyle = this.felt_color;
