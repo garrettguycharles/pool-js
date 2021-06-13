@@ -211,8 +211,8 @@ export class DrawTool {
 
     this.line_segment(left_path_line);
     this.line_segment(right_path_line);
-
 */
+
 
   }
 

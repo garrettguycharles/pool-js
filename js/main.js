@@ -296,7 +296,7 @@ function update() {
           let scale_vel = ball.velocity.scale(scale);
           ball.center = ball.center.add(scale_vel);
           move_by_velocity = false;
-          //draw();
+          draw();
           bumper_list[j].bounce_ball(ball);
         }
         /*
