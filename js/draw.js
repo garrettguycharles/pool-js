@@ -197,6 +197,8 @@ export class DrawTool {
     let left_ball_point = b.center.add(b.velocity.perpendicular_l.normalize().scale(b.radius));
     let right_ball_point = b.center.add(b.velocity.perpendicular_r.normalize().scale(b.radius));
 
+
+/*
     let left_path_line = new LineSegment(
       left_ball_point,
       left_ball_point.add(b.velocity.scale((b.velocity.magnitude + b.radius) / b.velocity.magnitude))
@@ -207,16 +209,17 @@ export class DrawTool {
       right_ball_point.add(b.velocity.scale((b.velocity.magnitude + b.radius) / b.velocity.magnitude))
     );
 
-    this.ctx.beginPath();
-    this.move_to(left_path_line.start.coord);
-    this.line_to(left_path_line.end.coord);
-    this.ctx.strokeStyle = "red";
-    this.ctx.lineWidth = 0.5;
-    this.ctx.stroke();
+    this.line_segment(left_path_line);
+    this.line_segment(right_path_line);
 
+*/
+
+  }
+
+  line_segment(l) {
     this.ctx.beginPath();
-    this.move_to(right_path_line.start.coord);
-    this.line_to(right_path_line.end.coord);
+    this.move_to(l.start.coord);
+    this.line_to(l.end.coord);
     this.ctx.strokeStyle = "red";
     this.ctx.lineWidth = 0.5;
     this.ctx.stroke();
