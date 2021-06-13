@@ -256,7 +256,7 @@ function update() {
       for (let j = 0; j < bumper_list.length; j++) {
         let scale = ball.next_step_collideshape_with(bumper_list[j]);
         if (scale !== false) {
-          console.log("will collide with bumper");
+          //console.log("will collide with bumper");
           let scale_vel = ball.velocity.scale(scale);
           ball.center = ball.center.add(scale_vel);
           move_by_velocity = false;
@@ -407,14 +407,19 @@ window.addEventListener("touchend", (e) => {
 game_canvas.addEventListener("mousemove", (e) => {
   if (mouse_down) {
     dragging = true;
+  } else {
+    dragging = false;
   }
-  
-  mouse_pos.x = e.offsetX;
-  mouse_pos.y = e.offsetY;
-  let change = previous_mouse_position.to(mouse_pos);
-  aim_cursor = aim_cursor.add(change);
-  previous_mouse_position.x = mouse_pos.x;
-  previous_mouse_position.y = mouse_pos.y;
+
+  if (dragging) {
+    mouse_pos.x = e.offsetX;
+    mouse_pos.y = e.offsetY;
+    let change = previous_mouse_position.to(mouse_pos);
+    aim_cursor = aim_cursor.add(change);
+    previous_mouse_position.x = mouse_pos.x;
+    previous_mouse_position.y = mouse_pos.y;
+  }
+
 });
 
 game_canvas.addEventListener("touchmove", (e) => {
