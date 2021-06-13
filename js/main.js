@@ -433,29 +433,28 @@ window.addEventListener("touchend", (e) => {
 });
 
 game_canvas.addEventListener("mousemove", (e) => {
-  if (dragging) {
-    mouse_pos.x = e.offsetX;
-    mouse_pos.y = e.offsetY;
-    let change = previous_mouse_position.to(mouse_pos);
-    console.log(change.magnitude);
+  mouse_pos.x = e.offsetX;
+  mouse_pos.y = e.offsetY;
+  let change = previous_mouse_position.to(mouse_pos);
+  console.log(change.magnitude);
 
-    if (change.magnitude > 5) {
-      if (mouse_down) {
-        dragging = true;
-      } else {
-        dragging = false;
-      }
+  if (change.magnitude > 5) {
+    if (mouse_down) {
+      dragging = true;
+    } else {
+      dragging = false;
     }
-
-    aim_cursor = aim_cursor.add(change);
-    previous_mouse_position.x = mouse_pos.x;
-    previous_mouse_position.y = mouse_pos.y;
   }
 
+  if (dragging) {
+    aim_cursor = aim_cursor.add(change);
+  }
+
+  previous_mouse_position.x = mouse_pos.x;
+  previous_mouse_position.y = mouse_pos.y;
 });
 
 game_canvas.addEventListener("touchmove", (e) => {
-  e.preventDefault();
   //console.log(e);
 
   if (e.changedTouches.length == 1) {
@@ -468,7 +467,10 @@ game_canvas.addEventListener("touchmove", (e) => {
       dragging = true;
     }
 
-    aim_cursor = aim_cursor.add(change);
+    if (dragging) {
+      aim_cursor = aim_cursor.add(change);
+    }
+
     previous_mouse_position.x = mouse_pos.x;
     previous_mouse_position.y = mouse_pos.y;
   }
