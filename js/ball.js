@@ -274,34 +274,51 @@ export class Ball extends Rect {
       return false;
     }
 
+    let left_ball_point = this.center.add(this.velocity.perpendicular_l.normalize().scale(this.radius));
+    let right_ball_point = this.center.add(this.velocity.perpendicular_r.normalize().scale(this.radius));
+
+    let left_path_line = new LineSegment(
+      left_ball_point,
+      left_ball_point.add(this.velocity.scale((this.velocity.magnitude + this.radius) / this.velocity.magnitude))
+    );
+
+    let right_path_line = new LineSegment(
+      right_ball_point,
+      right_ball_point.add(this.velocity.scale((this.velocity.magnitude + this.radius) / this.velocity.magnitude))
+    );
+
     let face = null;
     let corner = false;
 
     let faces = other.get_faces();
 
     for (let f of faces) {
-      let faceward = f.l_to_r;
-      let faceward_vel = this.velocity.project(faceward);
-      let normal_vel = this.velocity.project(f.outward);
-      let to_left = this.center.to(f.left);
-      let to_right = this.center.to(f.right);
-      let normal = to_left.project(f.outward);
+      let face_line = new LineSegment(f.left, f.right);
+      if (face_line.intersects(left_path_line) || face_line.intersects(right_path_line)) {
+        let faceward = f.l_to_r;
+        let faceward_vel = this.velocity.project(faceward);
+        let normal_vel = this.velocity.project(f.outward);
+        let to_left = this.center.to(f.left);
+        let to_right = this.center.to(f.right);
+        let normal = to_left.project(f.outward);
 
-      if (normal_vel.magnitude + this.radius >= normal.magnitude) {
-        // the ball may reach the face in the next step
-        if (normal.acute_with(normal_vel)) {
-          // the ball is moving towards the face
-          let l_to_intersection = to_left.project(faceward);
-          let r_to_intersection = to_right.project(faceward);
-          if (l_to_intersection.magnitude < faceward.magnitude && r_to_intersection.magnitude < faceward.magnitude) {
-            // the ball will intersect with this face on the next step.
-            face = f;
-            break;
+        if (normal_vel.magnitude + this.radius >= normal.magnitude) {
+          // the ball may reach the face in the next step
+          if (normal.acute_with(normal_vel)) {
+            // the ball is moving towards the face
+            let l_to_intersection = to_left.project(faceward);
+            let r_to_intersection = to_right.project(faceward);
+            if (l_to_intersection.magnitude < faceward.magnitude && r_to_intersection.magnitude < faceward.magnitude) {
+              // the ball will intersect with this face on the next step.
+              face = f;
+              break;
+            }
           }
         }
       }
-
     }
+
+
 
     if (face == null) {
       // ball may be colliding with a corner

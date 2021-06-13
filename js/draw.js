@@ -1,5 +1,6 @@
 import * as utils from "./utils.js";
 import {Rect} from "./rect.js";
+import {LineSegment} from "./line.js";
 
 export class DrawTool {
   constructor(canvas, screen) {
@@ -192,6 +193,33 @@ export class DrawTool {
       this.ctx.fillStyle = "red";
       this.ctx.fill();
     }
+
+    let left_ball_point = b.center.add(b.velocity.perpendicular_l.normalize().scale(b.radius));
+    let right_ball_point = b.center.add(b.velocity.perpendicular_r.normalize().scale(b.radius));
+
+    let left_path_line = new LineSegment(
+      left_ball_point,
+      left_ball_point.add(b.velocity.scale((b.velocity.magnitude + b.radius) / b.velocity.magnitude))
+    );
+
+    let right_path_line = new LineSegment(
+      right_ball_point,
+      right_ball_point.add(b.velocity.scale((b.velocity.magnitude + b.radius) / b.velocity.magnitude))
+    );
+
+    this.ctx.beginPath();
+    this.move_to(left_path_line.start.coord);
+    this.line_to(left_path_line.end.coord);
+    this.ctx.strokeStyle = "red";
+    this.ctx.lineWidth = 0.5;
+    this.ctx.stroke();
+
+    this.ctx.beginPath();
+    this.move_to(right_path_line.start.coord);
+    this.line_to(right_path_line.end.coord);
+    this.ctx.strokeStyle = "red";
+    this.ctx.lineWidth = 0.5;
+    this.ctx.stroke();
   }
 
   aim_line(cue_ball, mouse_pos) {

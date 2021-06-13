@@ -443,7 +443,7 @@ game_canvas.addEventListener("mousemove", (e) => {
   mouse_pos.x = e.offsetX;
   mouse_pos.y = e.offsetY;
   let change = previous_mouse_position.to(mouse_pos);
-  console.log(change.magnitude);
+  //console.log(change.magnitude);
 
   if (change.magnitude > 5) {
     if (mouse_down) {
@@ -468,7 +468,7 @@ game_canvas.addEventListener("touchmove", (e) => {
     mouse_pos.x = e.changedTouches[0].clientX;
     mouse_pos.y = e.changedTouches[0].clientY;
     let change = previous_mouse_position.to(mouse_pos);
-    console.log(change.magnitude);
+    //console.log(change.magnitude);
 
     if (change.magnitude > 5) {
       dragging = true;
