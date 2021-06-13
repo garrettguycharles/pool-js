@@ -405,7 +405,10 @@ window.addEventListener("touchend", (e) => {
 });
 
 game_canvas.addEventListener("mousemove", (e) => {
-  dragging = true;
+  if (mouse_down) {
+    dragging = true;
+  }
+  
   mouse_pos.x = e.offsetX;
   mouse_pos.y = e.offsetY;
   let change = previous_mouse_position.to(mouse_pos);
