@@ -124,6 +124,40 @@ export class Rect {
     }
   }
 
+  avoid_collision_circle(other, clearance = 1) {
+    let to_self = other.center.to(this.center);
+
+    if (to_self.magnitude < this.radius + other.radius) {
+      this.center = this.center.add(to_self.normalize().scale(this.radius + other.radius + clearance - to_self.magnitude));
+      return true;
+    }
+
+    return false;
+  }
+
+  stay_in_rect(other) {
+    let moved = false;
+
+    if (this.left < other.left) {
+      this.left = other.left;
+      moved = true;
+    }
+    if (this.top < other.top) {
+      this.top = other.top;
+      moved = true;
+    }
+    if (this.right > other.right) {
+      this.right = other.right;
+      moved = true;
+    }
+    if (this.bottom > other.bottom) {
+      this.bottom = other.bottom;
+      moved = true;
+    }
+
+    return moved;
+  }
+
   move_in_direction(distance, theta) {
     this.center = this.center.add(distance_in_direction(distance, theta));
   }

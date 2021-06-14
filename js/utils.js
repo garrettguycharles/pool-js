@@ -236,6 +236,12 @@ export function clamp(low, val, hi) {
   return Math.max(low, Math.min(val, hi));
 }
 
+export function interpolate(fro, to, x) {
+  let range = to - fro;
+  let prog = range * x;
+  return fro + prog;
+}
+
 export function getMousePosRel(element, e) {
     var rect = element.getBoundingClientRect();
     return {

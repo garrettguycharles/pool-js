@@ -1,6 +1,7 @@
 import * as utils from "./utils.js";
 import {Rect} from "./rect.js";
 import {LineSegment} from "./line.js";
+import {Vector} from "./vector.js";
 
 export class DrawTool {
   constructor(canvas, screen) {
@@ -183,15 +184,7 @@ export class DrawTool {
     }
 
     if (b.cue) {
-      this.ctx.beginPath();
-      this.ctx.ellipse(b.centerx, b.centery, b.radius, b.radius, 0, 0, Math.PI * 2);
-      this.ctx.fillStyle = white_gradient;
-      this.ctx.fill();
-
-      this.ctx.beginPath();
-      this.ctx.ellipse(b.centerx - b.radius / 2, b.centery - b.radius / 3, b.radius / 8, b.radius / 8, 0, 0, Math.PI * 2);
-      this.ctx.fillStyle = "red";
-      this.ctx.fill();
+      this.cue_ball(b);
     }
 
     let left_ball_point = b.center.add(b.velocity.perpendicular_l.normalize().scale(b.radius));
@@ -216,6 +209,23 @@ export class DrawTool {
 
   }
 
+  cue_ball(b) {
+    let white_gradient = this.ctx.createRadialGradient(b.centerx, b.centery, b.radius / 5, b.centerx, b.centery, b.radius);
+    white_gradient.addColorStop(0.3, "#ffffff");
+    white_gradient.addColorStop(0.8, "#dddddd");
+    white_gradient.addColorStop(1, "#aaaaaa");
+
+    this.ctx.beginPath();
+    this.ctx.ellipse(b.centerx, b.centery, b.radius, b.radius, 0, 0, Math.PI * 2);
+    this.ctx.fillStyle = white_gradient;
+    this.ctx.fill();
+
+    this.ctx.beginPath();
+    this.ctx.ellipse(b.centerx - b.radius / 2, b.centery - b.radius / 3, b.radius / 8, b.radius / 8, 0, 0, Math.PI * 2);
+    this.ctx.fillStyle = "red";
+    this.ctx.fill();
+  }
+
   line_segment(l) {
     this.ctx.beginPath();
     this.move_to(l.start.coord);
@@ -225,23 +235,8 @@ export class DrawTool {
     this.ctx.stroke();
   }
 
-  aim_line(cue_ball, mouse_pos) {
-    let dir = cue_ball.center.angle_to(mouse_pos);
-    let distance = mouse_pos.distance_to(cue_ball.center);
-    let line_distance = cue_ball.radius * 6;
-    let line_max_width = 20;
-
-    let start = cue_ball.center.add(utils.distance_in_direction(cue_ball.radius * 1.25, dir));
-    let end = cue_ball.center.add(utils.distance_in_direction(line_distance, dir));
-
-    this.ctx.beginPath();
-    this.move_to(start.coord);
-    this.line_to(end.coord);
-    this.ctx.lineWidth = utils.clamp(2, line_max_width * (1 - cue_ball.radius * 10 / distance), line_max_width);
-    this.ctx.strokeStyle = "white";
-    this.ctx.stroke();
-
-    let forward = mouse_pos.subtract(cue_ball.center);
+  aim_line(cue_ball, aim_cursor) {
+    let forward = aim_cursor.center.subtract(cue_ball.center);
     let sideways = forward.perpendicular_l.normalize();
     let left_start = cue_ball.center.add(sideways.scale(cue_ball.radius));
     let right_start = cue_ball.center.add(sideways.scale(-cue_ball.radius));
@@ -251,13 +246,139 @@ export class DrawTool {
     this.ctx.beginPath();
     this.move_to(left_start.coord);
     this.line_to(left_end.coord);
-    this.ctx.arc(mouse_pos.x, mouse_pos.y, cue_ball.radius, utils.radians(sideways.angle), utils.radians(sideways.angle) + Math.PI * 2);
+    this.ctx.arc(aim_cursor.center.x, aim_cursor.center.y, cue_ball.radius, utils.radians(sideways.angle), utils.radians(sideways.angle) + Math.PI * 2);
     this.move_to(right_end.coord);
     this.line_to(right_start.coord);
     this.ctx.lineWidth = 0.5;
+    this.ctx.strokeStyle = "#ffffff";
     this.ctx.stroke();
+  }
+
+  pool_stick(ball, aim_cursor, distance_back = 0) {
+    let butt_radius = ball.radius / 2;
+    let tip_radius = butt_radius / 2;
+    let distance = (ball.radius * 1.5) + distance_back;
+    let to_ball = ball.center.to(aim_cursor.center);
+    let stick_dir = to_ball.flip().normalize();
+    let stick_length = ball.radius * (60 / 1.125);
+
+    let leftward = to_ball.perpendicular_l.normalize();
+    let rightward = to_ball.perpendicular_r.normalize();
+
+    let tip_focus = ball.center.add(stick_dir.scale(distance));
+    let butt_focus = tip_focus.add(stick_dir.scale(stick_length));
+
+    let tip_left = tip_focus.add(leftward.scale(tip_radius));
+    let tip_right = tip_focus.add(rightward.scale(tip_radius));
+
+    let tip_cap_fraction = 1/400;
+    let tip_sleeve_fraction = 1/46;
+    let top_half_fraction = 23/50;
+    let grip_top_fraction = 35/50;
+    let grip_bottom_fraction = 48/50;
+
+    let tip_cap_bottom = tip_focus.add(stick_dir.scale(stick_length * tip_cap_fraction));
+    let tip_sleeve_bottom = tip_focus.add(stick_dir.scale(stick_length * tip_sleeve_fraction));
+    let grip_top = tip_focus.add(stick_dir.scale(stick_length * grip_top_fraction));
+    let grip_bottom = tip_focus.add(stick_dir.scale(stick_length * grip_bottom_fraction));
+
+    let top_half_bottom = tip_focus.add(stick_dir.scale(stick_length * top_half_fraction));
+
+    let tip_cap_left = tip_cap_bottom.add(leftward.scale(utils.interpolate(tip_radius, butt_radius, tip_cap_fraction)));
+    let tip_cap_right = tip_cap_bottom.add(rightward.scale(utils.interpolate(tip_radius, butt_radius, tip_cap_fraction)));
+    let tip_sleeve_left = tip_sleeve_bottom.add(leftward.scale(utils.interpolate(tip_radius, butt_radius, tip_sleeve_fraction)));
+    let tip_sleeve_right = tip_sleeve_bottom.add(rightward.scale(utils.interpolate(tip_radius, butt_radius, tip_sleeve_fraction)));
+    let top_half_left = top_half_bottom.add(leftward.scale(utils.interpolate(tip_radius, butt_radius, top_half_fraction)));
+    let top_half_right = top_half_bottom.add(rightward.scale(utils.interpolate(tip_radius, butt_radius, top_half_fraction)));
+    let grip_top_left = grip_top.add(leftward.scale(utils.interpolate(tip_radius, butt_radius, grip_top_fraction)));
+    let grip_top_right = grip_top.add(rightward.scale(utils.interpolate(tip_radius, butt_radius, grip_top_fraction)));
+    let grip_bottom_left = grip_bottom.add(leftward.scale(utils.interpolate(tip_radius, butt_radius, grip_bottom_fraction)));
+    let grip_bottom_right = grip_bottom.add(rightward.scale(utils.interpolate(tip_radius, butt_radius, grip_bottom_fraction)));
+
+    let butt_left = butt_focus.add(leftward.scale(butt_radius));
+    let butt_right = butt_focus.add(rightward.scale(butt_radius));
+
+    let cap_sleeve_gradient = this.ctx.createLinearGradient(tip_cap_left.x, tip_cap_left.y, tip_cap_right.x, tip_cap_right.y);
+    cap_sleeve_gradient.addColorStop(0, "#b8b8b8");
+    cap_sleeve_gradient.addColorStop(0.5, "#ebebeb");
+    cap_sleeve_gradient.addColorStop(1, "#b8b8b8");
+
+    let wood_gradient = this.ctx.createLinearGradient(tip_cap_left.x, tip_cap_left.y, tip_cap_right.x, tip_cap_right.y);
+    wood_gradient.addColorStop(0, "#977130");
+    wood_gradient.addColorStop(0.5, "#caa472");
+    wood_gradient.addColorStop(1, "#977130");
+
+    let handle_color_gradient = this.ctx.createLinearGradient(top_half_left.x, top_half_left.y, top_half_right.x, top_half_right.y);
+    handle_color_gradient.addColorStop(0, "#5c0000");
+    handle_color_gradient.addColorStop(0.5, "#8f0000");
+    handle_color_gradient.addColorStop(1, "#5c0000");
 
 
+    this.ctx.beginPath();
+    this.move_to(tip_left.coord);
+    this.line_to(tip_right.coord);
+    this.line_to(top_half_right.coord);
+    this.line_to(top_half_left.coord);
+    this.ctx.closePath();
+    this.ctx.fillStyle = wood_gradient;
+    this.ctx.fill();
+
+    this.ctx.beginPath();
+    this.move_to(top_half_left.coord);
+    this.line_to(top_half_right.coord);
+    this.line_to(grip_top_right.coord);
+    this.line_to(grip_top_left.coord);
+    this.ctx.closePath();
+    this.ctx.fillStyle = handle_color_gradient;
+    this.ctx.fill();
+
+    this.ctx.beginPath();
+    this.move_to(grip_top_left.coord);
+    this.line_to(grip_top_right.coord);
+    this.line_to(grip_bottom_right.coord);
+    this.line_to(grip_bottom_left.coord);
+    this.ctx.closePath();
+    this.ctx.fillStyle = "black";
+    this.ctx.fill();
+
+    this.ctx.beginPath();
+    this.move_to(grip_bottom_left.coord);
+    this.line_to(grip_bottom_right.coord);
+    this.line_to(butt_right.coord);
+    this.line_to(butt_left.coord);
+    this.ctx.closePath();
+    this.ctx.fillStyle = handle_color_gradient;
+    this.ctx.fill();
+
+    this.ctx.beginPath();
+    this.move_to(tip_cap_left.coord);
+    this.line_to(tip_cap_right.coord);
+    this.line_to(tip_sleeve_right.coord);
+    this.line_to(tip_sleeve_left.coord);
+    this.ctx.fillStyle = cap_sleeve_gradient;
+    this.ctx.fill();
+
+    this.ctx.beginPath();
+    this.move_to(tip_left.coord);
+    this.line_to(tip_right.coord);
+    this.line_to(tip_cap_right.coord);
+    this.line_to(tip_cap_left.coord);
+    this.ctx.fillStyle = "#32a6ff";
+    this.ctx.fill();
+
+    this.ctx.beginPath();
+    this.move_to(tip_left.coord);
+    this.ctx.ellipse(tip_focus.x, tip_focus.y, tip_radius / 2, tip_radius, utils.radians(to_ball.angle), -Math.PI / 2, Math.PI / 2);
+    this.ctx.closePath();
+    this.ctx.fillStyle = "#32a6ff";
+    this.ctx.fill();
+
+    this.ctx.beginPath();
+    this.move_to(butt_left.coord);
+    this.ctx.ellipse(butt_focus.x, butt_focus.y, butt_radius / 2, butt_radius, utils.radians(to_ball.angle), Math.PI / 2, 3 * Math.PI / 2);
+    this.ctx.closePath();
+    this.ctx.fillStyle = "black";
+    this.ctx.fill();
   }
 
   face(f) {
@@ -304,6 +425,18 @@ export class DrawTool {
       this.ctx.stroke();
     }
 
+  }
+
+  shot_power_widget(widget, ball_radius, distance = 0) {
+    this.rounded_rect(widget, 5);
+    // let cue_ball_rect = new Rect(0, 0, ball_radius * 2, ball_radius * 2);
+    let cue_ball_rect = new Rect(0, 0, widget.w * 0.9, widget.w * 0.9);
+    cue_ball_rect.center = widget.midtop;
+    this.cue_ball(cue_ball_rect);
+    let aim_point = new Rect(0, 0, 2, 2);
+    aim_point.center = cue_ball_rect.center.add(cue_ball_rect.center.to(cue_ball_rect.midtop));
+
+    this.pool_stick(cue_ball_rect, aim_point, distance);
   }
 
   pool_table(screen, table, pockets_list, bumper_list, side_pocket_mouth_angle = 15) {

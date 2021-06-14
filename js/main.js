@@ -40,30 +40,40 @@ let screen = new Rect(0, 0, game_canvas.width, game_canvas.height);
 let brush = new DrawTool(game_canvas, screen);
 
 let table = null;
+let shot_power_widget = null;
 
 let BALL_RADIUS, MAX_LAUNCH_SPEED;
 
 if (vertical_orientation) {
   table = new Rect(0, 0, screen.w * (50 / 62.5), screen.h * (100 / 112.5));
   BALL_RADIUS = table.h * (1.125 / 100);
+  shot_power_widget = new Rect(0, 0, screen.w * (6.25 / 62.5), BALL_RADIUS * 30 / 1.125);
 } else {
   table = new Rect(0, 0, screen.w * (100 / 112.5), screen.h * (50 / 62.5));
   BALL_RADIUS = table.w * (1.125/100);
+  shot_power_widget = new Rect(0, 0, screen.w * (6.25 / 112.5), BALL_RADIUS * 30 / 1.125);
 }
+
+shot_power_widget.midright = screen.midright;
 
 let POCKET_RADIUS = BALL_RADIUS * 2.25;
 
 table.center = screen.center;
 
-MAX_LAUNCH_SPEED = BALL_RADIUS * 10;
+let POWER_SHOT = 352; // inches per second (20 mph);
+
+MAX_LAUNCH_SPEED = POWER_SHOT * (table.major_dimension / (100 * FPS));
 
 let gravity = 0.5;
 let friction = 0.99;
 
 let mouse_down = false;
-let aim_cursor = new Vector(table.centerx, table.centery);
+let aim_cursor = new Rect(0, 0, BALL_RADIUS * 2, BALL_RADIUS * 2);
+aim_cursor.center = table.center;
 let mouse_pos = new Vector(table.centerx, table.centery);
-let can_shoot = false;
+let table_settled = false;
+
+let shot_power = 0;
 
 let pool_ball_list = [];
 let pocket_list = [];
@@ -75,7 +85,7 @@ let BUMPER_THICKNESS = (RAIL_THICKNESS * (2 / 7));
 
 let table_reset_timeout = null;
 
-let state = "play";
+let state = "aim";
 
 let num_balls = 9;
 
@@ -199,12 +209,72 @@ function draw() {
   }
 
 
-  if (can_shoot) {
+  if (table_settled) {
     brush.aim_line(cue_ball, aim_cursor);
+    brush.pool_stick(cue_ball, aim_cursor, shot_power);
+  }
+
+  if (state === "set_shot_power") {
+    brush.shot_power_widget(shot_power_widget, BALL_RADIUS, shot_power);
   }
 }
 
+function get_pool_ball_list_by_distance(ball) {
+  let to_return = [];
+  for (let i = 0; i < pool_ball_list.length; i++) {
+    let otherball = pool_ball_list[i];
+    if (ball !== otherball) {
+      if (to_return.length < 1) {
+        to_return.push(otherball);
+      } else {
+        let inserted = false;
+        for (let j = 0; j < to_return.length; j++) {
+          if (ball.center.distance_to(to_return[j].center) >= ball.center.distance_to(otherball.center)) {
+            to_return.splice(j, 0, otherball);
+            inserted = true;
+            break;
+          }
+        }
+
+        if (!inserted) {
+          to_return.push(otherball);
+        }
+      }
+    }
+  }
+
+  return to_return;
+}
+
 function update() {
+
+  if (state == "aim") {
+    let colliding = true;
+
+    while (colliding) {
+      colliding = false;
+
+      for (let i = 1; i < pool_ball_list.length; i++) {
+        if (aim_cursor.avoid_collision_circle(pool_ball_list[i], 0.1)) {
+          colliding = true;
+        }
+
+        if (aim_cursor.stay_in_rect(table)) {
+          colliding = true;
+        }
+      }
+    }
+  }
+
+  if (state == "retrieve_cue_ball") {
+    if (table_settled) {
+      cue_ball.pocket.color = "black";
+      cue_ball.pocket.remove_ball(cue_ball);
+      cue_ball.center = table.center;
+      state = "ball_in_hand";
+      aim_cursor.center =  table.center;
+    }
+  }
 
   if (state == "ball_in_hand") {
     let move = cue_ball.center.to(aim_cursor);
@@ -231,7 +301,7 @@ function update() {
 
 
 
-    aim_cursor = cue_ball.center;
+    aim_cursor.center =  cue_ball.center;
   }
 
   for (let i = 0; i < pool_ball_list.length; i++) {
@@ -244,8 +314,10 @@ function update() {
       ball.yspeed = 0;
     }
 
-    for (let j = 0; j < pool_ball_list.length; j++) {
-      let otherball = pool_ball_list[j];
+    let distance_sorted_pool_ball_list = get_pool_ball_list_by_distance(ball);
+
+    for (let j = 0; j < distance_sorted_pool_ball_list.length; j++) {
+      let otherball = distance_sorted_pool_ball_list[j];
 
       if (ball != otherball && !otherball.in_pocket) {
 
@@ -285,11 +357,7 @@ function update() {
             pocket.color = "#701414";
             state = "scratch";
             setTimeout(() => {
-              pocket.color = "black";
-              pocket.remove_ball(ball);
-              ball.center = table.center;
-              state = "ball_in_hand";
-              aim_cursor = table.center;
+              state = "retrieve_cue_ball";
             }, 3000);
           }
         } else if (pocket.collidepoint_circle(ball.center)) {
@@ -350,26 +418,26 @@ function update() {
       table_reset_timeout = setTimeout(() => {
         setup_table();
         table_reset_timeout = null;
-        state = "play";
+        state = "aim";
       }, 5000);
     }
   }
 
 
-  let new_can_shoot = true;
-  if (state === "play") {
+  let new_table_settled = true;
+  if (state === "aim" || state === "set_shot_power" || state === "retrieve_cue_ball") {
     pool_ball_list.every((ball, i) => {
       if (ball.is_moving) {
-        new_can_shoot = false;
+        new_table_settled = false;
         return false;
       }
       return true;
     });
   } else {
-    new_can_shoot = false;
+    new_table_settled = false;
   }
 
-  can_shoot = new_can_shoot;
+  table_settled = new_table_settled;
 
 }
 
@@ -412,53 +480,43 @@ function touch_click_end(e) {
 
   clearTimeout(drag_timeout);
 
-  if (e.type === "touchend") {
+  if (e.type === "touchend" || e.type === "mouseup") {
     mouse_down = false;
 
     if (dragging) {
       return;
     }
 
-    if (state === "play") {
-      if (can_shoot) {
-
-        let launch_vect = aim_cursor.subtract(cue_ball.center);
-
-        cue_ball.velocity = launch_vect.scale(1/20);
-        if (cue_ball.velocity.magnitude > MAX_LAUNCH_SPEED) {
-          cue_ball.velocity = cue_ball.velocity.scale(MAX_LAUNCH_SPEED / cue_ball.velocity.magnitude);
-        }
-        aim_cursor = table.center;
-      }
-    }
-
-    if (state === "ball_in_hand") {
-      state = "play";
-    }
-  }
-
-  if (e.type === "mouseup") {
-    mouse_down = false;
-
-    if (dragging) {
+    if (state == "aim" && table_settled) {
+      state = "set_shot_power";
       return;
     }
 
-    if (state === "play") {
-      if (can_shoot) {
+    if (state === "set_shot_power") {
+      if (table_settled) {
 
-        let launch_vect = aim_cursor.subtract(cue_ball.center);
-
-        cue_ball.velocity = launch_vect.scale(1/20);
-        if (cue_ball.velocity.magnitude > MAX_LAUNCH_SPEED) {
-          cue_ball.velocity = cue_ball.velocity.scale(MAX_LAUNCH_SPEED / cue_ball.velocity.magnitude);
+        if (shot_power < 5) {
+          shot_power = 0;
+          state = "aim";
+          return;
         }
-        aim_cursor = table.center;
+
+        let launch_vect = aim_cursor.center.subtract(cue_ball.center);
+
+        cue_ball.velocity = launch_vect.normalize().scale(MAX_LAUNCH_SPEED * get_shot_power_scale());
+
+        aim_cursor.center =  table.center;
+        shot_power = 0;
       }
+
+      state = "aim";
+      return;
     }
 
     if (state === "ball_in_hand") {
-      state = "play";
+      state = "aim";
+      aim_cursor.center =  table.center;
+      return;
     }
   }
 }
@@ -479,11 +537,28 @@ window.addEventListener("touchend", (e) => {
   touch_click_end(e);
 });
 
-game_canvas.addEventListener("mousemove", (e) => {
-  mouse_pos.x = e.offsetX;
-  mouse_pos.y = e.offsetY;
-  let change = previous_mouse_position.to(mouse_pos);
-  //console.log(change.magnitude);
+function get_max_shot_power() {
+  return shot_power_widget.h - cue_ball.radius * 4.25;
+}
+
+function get_shot_power_scale() {
+  return shot_power / get_max_shot_power();
+}
+
+function on_cursor_move(e) {
+  let change;
+
+  if (e.type === "mousemove") {
+    mouse_pos.x = e.offsetX;
+    mouse_pos.y = e.offsetY;
+    change = previous_mouse_position.to(mouse_pos);
+  }
+
+  if (e.type === "touchmove") {
+    mouse_pos.x = e.changedTouches[0].clientX;
+    mouse_pos.y = e.changedTouches[0].clientY;
+    change = previous_mouse_position.to(mouse_pos);
+  }
 
   if (change.magnitude > 5) {
     if (mouse_down) {
@@ -493,34 +568,33 @@ game_canvas.addEventListener("mousemove", (e) => {
     }
   }
 
-  if (dragging && mouse_down) {
-    aim_cursor = aim_cursor.add(change);
+  if (state === "aim" || state === "ball_in_hand") {
+
+    if (dragging && mouse_down) {
+      aim_cursor.center = aim_cursor.center.add(change);
+    }
+  }
+
+  if (state == "set_shot_power") {
+    if (dragging && mouse_down && mouse_pos.x > table.centerx) {
+      shot_power += change.y;
+
+      shot_power = utils.clamp(0, shot_power, get_max_shot_power());
+    }
   }
 
   previous_mouse_position.x = mouse_pos.x;
   previous_mouse_position.y = mouse_pos.y;
+}
+
+game_canvas.addEventListener("mousemove", (e) => {
+  e.preventDefault();
+  on_cursor_move(e);
 });
 
 game_canvas.addEventListener("touchmove", (e) => {
-  //console.log(e);
-
-  if (e.changedTouches.length == 1) {
-    mouse_pos.x = e.changedTouches[0].clientX;
-    mouse_pos.y = e.changedTouches[0].clientY;
-    let change = previous_mouse_position.to(mouse_pos);
-    //console.log(change.magnitude);
-
-    if (change.magnitude > 5) {
-      dragging = true;
-    }
-
-    if (dragging && mouse_down) {
-      aim_cursor = aim_cursor.add(change);
-    }
-
-    previous_mouse_position.x = mouse_pos.x;
-    previous_mouse_position.y = mouse_pos.y;
-  }
+  e.preventDefault();
+  on_cursor_move(e);
 });
 
 setInterval(step, 1000 / FPS);
