@@ -429,8 +429,8 @@ export class DrawTool {
 
   shot_power_widget(widget, ball_radius, distance = 0) {
     this.rounded_rect(widget, 5);
-    // let cue_ball_rect = new Rect(0, 0, ball_radius * 2, ball_radius * 2);
-    let cue_ball_rect = new Rect(0, 0, widget.w * 0.9, widget.w * 0.9);
+    let cue_ball_rect = new Rect(0, 0, ball_radius * 2, ball_radius * 2);
+    // let cue_ball_rect = new Rect(0, 0, widget.w * 0.9, widget.w * 0.9);
     cue_ball_rect.center = widget.midtop;
     this.cue_ball(cue_ball_rect);
     let aim_point = new Rect(0, 0, 2, 2);

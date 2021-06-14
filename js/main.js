@@ -277,7 +277,7 @@ function update() {
   }
 
   if (state == "ball_in_hand") {
-    let move = cue_ball.center.to(aim_cursor);
+    let move = cue_ball.center.to(aim_cursor.center);
     if (move.magnitude > cue_ball.radius) {
       move = move.scale(cue_ball.radius / move.magnitude);
     }
