@@ -156,6 +156,23 @@ export class Vector {
     return false;
   }
 
+  lerp_towards(other, val = 0.01) {
+    let to_other = this.to(other);
+    return this.add(to_other.scale(val))
+  }
+
+  approach_average(other, val = 0.01) {
+    let avg = this.add(other).scale(0.5);
+
+    return this.lerp_towards(avg, val).coord;
+  }
+
+  approach_sum(other, val = 0.01) {
+    let sum = this.add(other).scale(0.5);
+
+    return this.lerp_towards(sum, val).coord;
+  }
+
   to(other) {
     return other.subtract(this);
   }

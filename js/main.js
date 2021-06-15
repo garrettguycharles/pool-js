@@ -41,6 +41,7 @@ let brush = new DrawTool(game_canvas, screen);
 
 let table = null;
 let shot_power_widget = null;
+let ball_english_widget = null;
 
 let BALL_RADIUS, MAX_LAUNCH_SPEED;
 
@@ -48,15 +49,26 @@ if (vertical_orientation) {
   table = new Rect(0, 0, screen.w * (50 / 62.5), screen.h * (100 / 112.5));
   BALL_RADIUS = table.h * (1.125 / 100);
   shot_power_widget = new Rect(0, 0, screen.w * (6.25 / 62.5), BALL_RADIUS * 30 / 1.125);
+  ball_english_widget = new Rect(0, 0, screen.w / 2, screen.w / 2);
+  ball_english_widget.midleft = screen.midleft;
 } else {
   table = new Rect(0, 0, screen.w * (100 / 112.5), screen.h * (50 / 62.5));
   BALL_RADIUS = table.w * (1.125/100);
   shot_power_widget = new Rect(0, 0, screen.w * (6.25 / 112.5), BALL_RADIUS * 30 / 1.125);
+  ball_english_widget = new Rect(0, 0, screen.h / 2, screen.h / 2);
+  ball_english_widget.topleft = screen.topleft;
 }
 
+ball_english_widget.roll_point = ball_english_widget.center.add([0, -ball_english_widget.radius * 2/5]);
 shot_power_widget.midright = screen.midright;
 
+let ball_aim_point = new Rect(0, 0, ball_english_widget.radius / 4, ball_english_widget.radius / 4);
+
 let POCKET_RADIUS = BALL_RADIUS * 2.25;
+
+let METER = table.major_dimension / 2.54;
+let GRAVITY = (9.80665 * METER) / (FPS * FPS);
+
 
 table.center = screen.center;
 
@@ -64,8 +76,10 @@ let POWER_SHOT = 352; // inches per second (20 mph);
 
 MAX_LAUNCH_SPEED = POWER_SHOT * (table.major_dimension / (100 * FPS));
 
-let gravity = 0.5;
-let friction = 0.99;
+let friction = 0.993;
+
+let mu_rolling = 0.01;
+let mu_skidding = 0.2;
 
 let mouse_down = false;
 let aim_cursor = new Rect(0, 0, BALL_RADIUS * 2, BALL_RADIUS * 2);
@@ -216,6 +230,7 @@ function draw() {
 
   if (state === "set_shot_power") {
     brush.shot_power_widget(shot_power_widget, BALL_RADIUS, shot_power);
+    brush.ball_english_widget(ball_english_widget, ball_aim_point);
   }
 }
 
@@ -309,7 +324,7 @@ function update() {
 
     let move_by_velocity = true;
 
-    if (ball.velocity.magnitude < 0.1) {
+    if (ball.velocity.magnitude < 0.1 && ball.rotation.magnitude < 0.1) {
       ball.xspeed = 0;
       ball.yspeed = 0;
     }
@@ -333,7 +348,14 @@ function update() {
         }
 
         if (scale != false) {
+          if (!ball.skidding && ball.rotation.magnitude <= 0) {
+            ball.rotation = ball.velocity;
+          }
           ball.bounce_elastic_2d(otherball, 1.1);
+          // ball.rotation = ball.rotation.add(ball.velocity);
+          // otherball.rotation = otherball.rotation.add(otherball.velocity);
+          ball.start_skid(GRAVITY, mu_skidding);
+          otherball.start_skid(GRAVITY, mu_skidding);
         }
 
         /*else if (collides) {
@@ -383,6 +405,7 @@ function update() {
           move_by_velocity = false;
           draw();
           bumper_list[j].bounce_ball(ball);
+          ball.start_skid(GRAVITY, mu_skidding);
         }
         /*
         if (ball.colliderect(bumper_list[j])) {
@@ -391,14 +414,14 @@ function update() {
         */
       }
     }
-    //ball.yspeed += gravity;
 
     if (move_by_velocity) {
-      ball.x += ball.xspeed;
-      ball.y += ball.yspeed;
+      ball.move();
 
-      ball.xspeed *= friction;
-      ball.yspeed *= friction;
+      // ball.xspeed *= friction;
+      // ball.yspeed *= friction;
+      ball.apply_friction(GRAVITY, mu_rolling, mu_skidding);
+      ball.apply_rotation(GRAVITY, mu_rolling, mu_skidding);
     }
   }
 
@@ -489,6 +512,7 @@ function touch_click_end(e) {
 
     if (state == "aim" && table_settled) {
       state = "set_shot_power";
+      ball_aim_point.center = ball_english_widget.center;
       return;
     }
 
@@ -504,7 +528,15 @@ function touch_click_end(e) {
         let launch_vect = aim_cursor.center.subtract(cue_ball.center);
 
         cue_ball.velocity = launch_vect.normalize().scale(MAX_LAUNCH_SPEED * get_shot_power_scale());
+        let english_vect = ball_english_widget.center.to(ball_aim_point.center);
+        if (english_vect.magnitude > 0) {
+          english_vect = english_vect.scale(cue_ball.radius / ball_english_widget.radius);
+          let rotation_vect = launch_vect.flip().normalize().scale(english_vect.y);
+          rotation_vect = rotation_vect.add(launch_vect.perpendicular_r.normalize().scale(english_vect.x));
+          cue_ball.rotation = rotation_vect;
+        }
 
+        cue_ball.start_skid(GRAVITY, mu_skidding);
         aim_cursor.center =  table.center;
         shot_power = 0;
       }
@@ -542,10 +574,18 @@ function get_max_shot_power() {
 }
 
 function get_shot_power_scale() {
-  return shot_power / get_max_shot_power();
+  return 1 - Math.cos(Math.PI / 2 * (shot_power / get_max_shot_power()));
 }
 
 function on_cursor_move(e) {
+
+  if (e.type === "touchmove" && e.touches.length > 1) {
+    console.log("multiple touches, should scroll");
+    return;
+  }
+
+  e.preventDefault();
+
   let change;
 
   if (e.type === "mousemove") {
@@ -576,10 +616,18 @@ function on_cursor_move(e) {
   }
 
   if (state == "set_shot_power") {
-    if (dragging && mouse_down && mouse_pos.x > table.centerx) {
-      shot_power += change.y;
+    if (dragging && mouse_down) {
+      if (mouse_pos.x > table.centerx) {
+        shot_power += change.y;
 
-      shot_power = utils.clamp(0, shot_power, get_max_shot_power());
+        shot_power = utils.clamp(0, shot_power, get_max_shot_power());
+      } else {
+        ball_aim_point.center = ball_aim_point.center.add(change);
+        if (Math.abs(ball_aim_point.centerx - ball_english_widget.centerx) < 3) {
+          ball_aim_point.centerx = ball_english_widget.centerx;
+        }
+        ball_aim_point.stay_in_circle(ball_english_widget);
+      }
     }
   }
 
@@ -588,12 +636,10 @@ function on_cursor_move(e) {
 }
 
 game_canvas.addEventListener("mousemove", (e) => {
-  e.preventDefault();
   on_cursor_move(e);
 });
 
 game_canvas.addEventListener("touchmove", (e) => {
-  e.preventDefault();
   on_cursor_move(e);
 });
 

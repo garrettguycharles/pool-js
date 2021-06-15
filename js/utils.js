@@ -236,10 +236,30 @@ export function clamp(low, val, hi) {
   return Math.max(low, Math.min(val, hi));
 }
 
+export function cos_interp(fro, to, frac) {
+
+    let diff = to - fro;
+    let cos_val = 180 * frac;
+    let d_frac = Math.cos(radians(cos_val));
+    d_frac += 1;
+    d_frac = 2 - d_frac;
+    d_frac *= 0.5;
+    diff *= d_frac;
+    return fro + diff;
+}
+
 export function interpolate(fro, to, x) {
   let range = to - fro;
   let prog = range * x;
   return fro + prog;
+}
+
+export function get_gravity(cue_ball_radius, FPS) {
+  let g = 9.8; // m/s/s
+  g *= (1 / FPS) * (1 / FPS); // m/F/F;
+  g *= (1000 / 28.5); // CB / F^2;
+
+  return g;
 }
 
 export function getMousePosRel(element, e) {

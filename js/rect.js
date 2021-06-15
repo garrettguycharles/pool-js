@@ -158,6 +158,18 @@ export class Rect {
     return moved;
   }
 
+  stay_in_circle(other) {
+    let moved = false;
+
+    let to_other = this.center.to(other.center);
+    if (to_other.magnitude + this.radius > other.radius) {
+      this.center = other.center.add(to_other.flip().normalize().scale(other.radius - this.radius));
+      moved = true;
+    }
+
+    return moved;
+  }
+
   move_in_direction(distance, theta) {
     this.center = this.center.add(distance_in_direction(distance, theta));
   }

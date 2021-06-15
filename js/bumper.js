@@ -66,7 +66,7 @@ export class Bumper extends Rect {
       face = this.front_face;
       normal = this.front_normal;
       tangent = this.front_tangent;
-      damping = 1.05;
+      damping = (1 / 0.7);
 
     } else if (this.left_face_length > this.left_face.left.to(ball.center).project(this.left_tangent).magnitude
       && this.left_face_length > this.left_face.right.to(ball.center).project(this.left_tangent).magnitude) {
@@ -116,6 +116,9 @@ export class Bumper extends Rect {
       ball.center = ball.center.add(normal);
     }
     */
+
+    let angle_of_incidence = normal.flip().angle - ball.velocity.angle;
+    damping = 1 + (damping - 1) * Math.cos(utils.radians(angle_of_incidence));
 
     ball.bounce_elastic_2d(this, damping, normal, false);
   }

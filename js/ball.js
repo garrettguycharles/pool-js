@@ -1,4 +1,4 @@
-import {sphere_radius_to_volume, sphere_volume_to_radius, dot, scale_coord, project, get_direction, distance_between, angle_between, distance_in_direction, add_coord, get_speed, radians, degrees} from "./utils.js";
+import {get_gravity, sphere_radius_to_volume, sphere_volume_to_radius, dot, scale_coord, project, get_direction, distance_between, angle_between, distance_in_direction, add_coord, get_speed, radians, degrees} from "./utils.js";
 import {Vector} from "./vector.js";
 import {Rect} from "./rect.js";
 import {LineSegment} from "./line.js";
@@ -20,7 +20,10 @@ export class Ball extends Rect {
     super(x, y, r, r);
     this.color = "black";
     this.velocity = new Vector(0, 0);
+    this.rotation = new Vector(0, 0);
     this.radius = r;
+    this.skidding = false;
+    this.skid_distance = 0;
   }
 
   bounce_inelastic_2d(other) {
@@ -354,7 +357,74 @@ export class Ball extends Rect {
     }
   }
 
+  move() {
+    this.position = this.position.add(this.velocity);
+    if (this.skidding) {
+      this.skid_distance = Math.max(0, this.skid_distance - this.velocity.magnitude);
+      if (this.skid_distance === 0) {
+        this.skidding = false;
+      }
+    }
+  }
 
+  apply_friction(g, mu_rolling = 0.01, mu_skidding = 0.2) {
+    let old_mag = this.velocity.magnitude;
+    if (old_mag === 0) {
+      return;
+    }
+    let to_root;
+    if (this.skidding) {
+      to_root = old_mag * old_mag - 2 * mu_skidding * old_mag * g;
+    } else {
+      to_root = old_mag * old_mag - 2 * mu_rolling * old_mag * g;
+    }
+
+    if (to_root <= 0) {
+      return;
+    }
+
+    let new_magnitude = Math.sqrt(to_root);
+
+    this.velocity = this.velocity.scale(new_magnitude / old_mag);
+
+
+  }
+
+  apply_rotation(g, mu_rolling = 0.01, mu_skidding = 0.2) {
+    let old_rot = this.rotation.magnitude;
+    if (old_rot < 0.001) {
+      return;
+    }
+    let to_root;
+    if (this.skidding) {
+      to_root = old_rot * old_rot - 2 * mu_rolling * old_rot * g;
+    } else {
+      to_root = old_rot * old_rot - 2 * mu_skidding * old_rot * g;
+    }
+
+    if (to_root <= 0) {
+      this.rotation = this.rotation.scale(0);
+      return;
+    }
+
+    let new_rot = Math.sqrt(to_root);
+
+    let change = (old_rot - new_rot) / old_rot;
+
+    let vel_change = this.rotation.scale(change);
+
+    change *= 3;
+
+    let english_coefficient = 0.3;
+
+    this.velocity = this.velocity.add(vel_change);
+    this.rotation = this.rotation.scale(1 - change);
+  }
+
+  start_skid(g, mu_skidding = 0.2) {
+    this.skidding = true;
+    this.skid_distance = (12 * this.velocity.magnitude * this.velocity.magnitude) / (49 * mu_skidding * g);
+  }
 
   get["momentum"]() {
     return this.velocity.magnitude * this.mass;

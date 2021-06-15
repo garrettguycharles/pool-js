@@ -49,6 +49,7 @@ export class DrawTool {
       this.ctx.fill();
     } else {
       this.ctx.strokeStyle = color || r.color;
+      this.ctx.lineWidth = 10;
       this.ctx.stroke();
     }
   }
@@ -204,9 +205,18 @@ export class DrawTool {
 
     this.line_segment(left_path_line);
     this.line_segment(right_path_line);
+
+
+    if (b.rotation.magnitude > 0 || b.rotating_independently) {
+      let rotation_line = new LineSegment(b.center, b.center.add(b.rotation.scale(100)));
+      this.line_segment(rotation_line);
+    }
+
+    if (b.skidding) {
+      this.ellipse(b, false, "#00ff00");
+    }
+
 */
-
-
   }
 
   cue_ball(b) {
@@ -224,6 +234,30 @@ export class DrawTool {
     this.ctx.ellipse(b.centerx - b.radius / 2, b.centery - b.radius / 3, b.radius / 8, b.radius / 8, 0, 0, Math.PI * 2);
     this.ctx.fillStyle = "red";
     this.ctx.fill();
+  }
+
+  ball_english_widget(widget, aim_point) {
+    let white_gradient = this.ctx.createRadialGradient(widget.centerx, widget.centery, widget.radius / 5, widget.centerx, widget.centery, widget.radius);
+    white_gradient.addColorStop(0.3, "#ffffff99");
+    white_gradient.addColorStop(0.8, "#dddddd99");
+    white_gradient.addColorStop(1, "#aaaaaa99");
+
+    this.ctx.beginPath();
+    this.ctx.ellipse(widget.centerx, widget.centery, widget.radius, widget.radius, 0, 0, Math.PI * 2);
+    this.ctx.fillStyle = white_gradient;
+    this.ctx.fill();
+
+    this.ctx.beginPath();
+    this.ctx.ellipse(aim_point.centerx, aim_point.centery, aim_point.radius, aim_point.radius, 0, 0, Math.PI * 2);
+    this.ctx.fillStyle = "#ff000099";
+    this.ctx.fill();
+
+    this.ctx.beginPath();
+    this.move_to(widget.midtop.coord);
+    this.line_to(widget.midbottom.coord);
+    this.ctx.strokeStyle = "#ff333399";
+    this.ctx.lineWidth = 1;
+    this.ctx.stroke();
   }
 
   line_segment(l) {
@@ -429,8 +463,8 @@ export class DrawTool {
 
   shot_power_widget(widget, ball_radius, distance = 0) {
     this.rounded_rect(widget, 5);
-    let cue_ball_rect = new Rect(0, 0, ball_radius * 2, ball_radius * 2);
-    // let cue_ball_rect = new Rect(0, 0, widget.w * 0.9, widget.w * 0.9);
+    //let cue_ball_rect = new Rect(0, 0, ball_radius * 2, ball_radius * 2);
+    let cue_ball_rect = new Rect(0, 0, widget.w * 0.8, widget.w * 0.8);
     cue_ball_rect.center = widget.midtop;
     this.cue_ball(cue_ball_rect);
     let aim_point = new Rect(0, 0, 2, 2);
