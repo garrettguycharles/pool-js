@@ -348,10 +348,17 @@ function update() {
         }
 
         if (scale != false) {
-          if (!ball.skidding && ball.rotation.magnitude <= 0) {
+          let set_rotation = false;
+          if (ball.distance_rolling_forward >= ball.radius * 3 * Math.PI) {
+            set_rotation = true;
             ball.rotation = ball.velocity;
           }
           ball.bounce_elastic_2d(otherball, 1.1);
+          if (set_rotation) {
+            if (ball.velocity.magnitude < ball.rotation.magnitude) {
+              ball.rotation = ball.rotation.scale(ball.velocity.magnitude / ball.rotation.magnitude);
+            }
+          }
           // ball.rotation = ball.rotation.add(ball.velocity);
           // otherball.rotation = otherball.rotation.add(otherball.velocity);
           ball.start_skid(GRAVITY, mu_skidding);

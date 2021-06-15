@@ -212,11 +212,11 @@ export class DrawTool {
       this.line_segment(rotation_line);
     }
 
-    if (b.skidding) {
+    if (b.distance_rolling_forward >= b.radius * 3 * Math.PI) {
       this.ellipse(b, false, "#00ff00");
     }
-
 */
+
   }
 
   cue_ball(b) {

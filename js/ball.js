@@ -24,6 +24,7 @@ export class Ball extends Rect {
     this.radius = r;
     this.skidding = false;
     this.skid_distance = 0;
+    this.distance_rolling_forward = 0;
   }
 
   bounce_inelastic_2d(other) {
@@ -364,6 +365,12 @@ export class Ball extends Rect {
       if (this.skid_distance === 0) {
         this.skidding = false;
       }
+    }
+
+    if (this.rotation.magnitude > 0) {
+      this.distance_rolling_forward = 0;
+    } else {
+      this.distance_rolling_forward += this.velocity.magnitude;
     }
   }
 
