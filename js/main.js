@@ -40,6 +40,7 @@ let screen = new Rect(0, 0, game_canvas.width, game_canvas.height);
 let brush = new DrawTool(game_canvas, screen);
 
 let table = null;
+let kitchen = null;
 let shot_power_widget = null;
 let ball_english_widget = null;
 
@@ -51,12 +52,14 @@ if (vertical_orientation) {
   shot_power_widget = new Rect(0, 0, screen.w * (6.25 / 62.5), BALL_RADIUS * 30 / 1.125);
   ball_english_widget = new Rect(0, 0, screen.w / 2, screen.w / 2);
   ball_english_widget.midleft = screen.midleft;
+  kitchen = new Rect(0, 0, table.w, table.h / 4);
 } else {
   table = new Rect(0, 0, screen.w * (100 / 112.5), screen.h * (50 / 62.5));
   BALL_RADIUS = table.w * (1.125/100);
   shot_power_widget = new Rect(0, 0, screen.w * (6.25 / 112.5), BALL_RADIUS * 30 / 1.125);
   ball_english_widget = new Rect(0, 0, screen.h / 2, screen.h / 2);
   ball_english_widget.topleft = screen.topleft;
+  kitchen = new Rect(0, 0, table.w / 4, table.h);
 }
 
 ball_english_widget.roll_point = ball_english_widget.center.add([0, -ball_english_widget.radius * 2/5]);
@@ -71,6 +74,8 @@ let GRAVITY = (9.80665 * METER) / (FPS * FPS);
 
 
 table.center = screen.center;
+
+kitchen.topleft = table.topleft;
 
 let POWER_SHOT = 352; // inches per second (20 mph);
 
@@ -99,11 +104,21 @@ let BUMPER_THICKNESS = (RAIL_THICKNESS * (2 / 7));
 
 let table_reset_timeout = null;
 
-let state = "aim";
+let state = "ball_in_hand";
+let ball_in_hand_type = "break";
 
 let num_balls = 9;
 
+let next_target_ball = 1;
+let first_contact_ball = null;
+let foul = false;
+
 function setup_table() {
+
+  state = "ball_in_hand";
+  ball_in_hand_type = "break";
+
+  next_target_ball = 1;
 
   pool_ball_list = [];
   pocket_list = [];
@@ -216,16 +231,37 @@ function draw() {
     screen_context.fill();
   }
 
+
+  if ((state === "aim" || state === "set_shot_power") && table_settled) {
+    brush.aim_line(cue_ball, aim_cursor);
+    brush.pool_stick(cue_ball, aim_cursor, shot_power);
+  }
+
+  if ((state === "aim" || state === "set_shot_power" || state === "ball_in_hand") && table_settled) {
+    screen_context.beginPath();
+    screen_context.arc(pool_ball_list[next_target_ball].centerx, pool_ball_list[next_target_ball].centery, pool_ball_list[next_target_ball].radius * 1.25, 0, Math.PI * 2);
+    screen_context.fillStyle = "#ffffff55";
+    screen_context.fill();
+  }
+
+  if (state === "shot_rolling" && foul) {
+    screen_context.beginPath();
+    screen_context.arc(cue_ball.centerx, cue_ball.centery, cue_ball.radius * 1.5, 0, Math.PI * 2);
+    screen_context.fillStyle = "#ff000099";
+    screen_context.fill();
+
+    if (first_contact_ball !== null) {
+      screen_context.beginPath();
+      screen_context.arc(first_contact_ball.centerx, first_contact_ball.centery, first_contact_ball.radius * 1.5, 0, Math.PI * 2);
+      screen_context.fillStyle = "#ff000099";
+      screen_context.fill();
+    }
+  }
+
   for (let i = 0; i < pool_ball_list.length; i++) {
     if (!pool_ball_list[i].in_pocket) {
       brush.pool_ball(pool_ball_list[i]);
     }
-  }
-
-
-  if (table_settled) {
-    brush.aim_line(cue_ball, aim_cursor);
-    brush.pool_stick(cue_ball, aim_cursor, shot_power);
   }
 
   if (state === "set_shot_power") {
@@ -261,33 +297,33 @@ function get_pool_ball_list_by_distance(ball) {
   return to_return;
 }
 
+
+function refresh_next_target_ball() {
+  for (let i = next_target_ball; i < pool_ball_list.length; i++) {
+    if (!pool_ball_list[i].in_pocket) {
+      next_target_ball = i;
+      break;
+    }
+  }
+}
+
 function update() {
 
   if (state == "aim") {
-    let colliding = true;
-
-    while (colliding) {
-      colliding = false;
-
-      for (let i = 1; i < pool_ball_list.length; i++) {
-        if (aim_cursor.avoid_collision_circle(pool_ball_list[i], 0.1)) {
-          colliding = true;
-        }
-
-        if (aim_cursor.stay_in_rect(table)) {
-          colliding = true;
-        }
-      }
-    }
   }
 
-  if (state == "retrieve_cue_ball") {
+  if (state === "retrieve_cue_ball") {
     if (table_settled) {
       cue_ball.pocket.color = "black";
       cue_ball.pocket.remove_ball(cue_ball);
       cue_ball.center = table.center;
+      cue_ball.velocity = new Vector(0, 0);
+      cue_ball.rotation = new Vector(0, 0);
       state = "ball_in_hand";
-      aim_cursor.center =  table.center;
+      ball_in_hand_type = "foul";
+      aim_cursor.center =  pool_ball_list[next_target_ball].center;
+      refresh_next_target_ball();
+      set_aim_cursor_at_collision();
     }
   }
 
@@ -308,11 +344,18 @@ function update() {
           colliding = true;
         }
 
-        if (cue_ball.stay_in_rect(table)) {
-          colliding = true;
+        if (ball_in_hand_type === "break") {
+          if (cue_ball.stay_in_rect(kitchen)) {
+            colliding = true;
+          }
+        } else if (ball_in_hand_type === "foul") {
+          if (cue_ball.stay_in_rect(table)) {
+            colliding = true;
+          }
         }
       }
     }
+
 
 
 
@@ -348,17 +391,26 @@ function update() {
         }
 
         if (scale != false) {
-          let set_rotation = false;
+          /*let set_rotation = false;
           if (ball.distance_rolling_forward >= ball.radius * 3 * Math.PI) {
             set_rotation = true;
             ball.rotation = ball.velocity;
+          }*/
+
+          if (first_contact_ball === null) {
+            if (ball === cue_ball) {
+              first_contact_ball = otherball;
+            } else if (otherball === cue_ball) {
+              first_contact_ball = ball;
+            }
           }
+
           ball.bounce_elastic_2d(otherball, 1.1);
-          if (set_rotation) {
+          /*if (set_rotation) {
             if (ball.velocity.magnitude < ball.rotation.magnitude) {
               ball.rotation = ball.rotation.scale(ball.velocity.magnitude / ball.rotation.magnitude);
             }
-          }
+          }*/
           // ball.rotation = ball.rotation.add(ball.velocity);
           // otherball.rotation = otherball.rotation.add(otherball.velocity);
           ball.start_skid(GRAVITY, mu_skidding);
@@ -428,10 +480,20 @@ function update() {
       // ball.xspeed *= friction;
       // ball.yspeed *= friction;
       ball.apply_friction(GRAVITY, mu_rolling, mu_skidding);
-      ball.apply_rotation(GRAVITY, mu_rolling, mu_skidding);
+
+      if (ball === cue_ball) {
+        ball.apply_rotation(GRAVITY, mu_rolling, mu_skidding);
+      }
     }
   }
 
+  if (state === "shot_rolling") {
+    if (first_contact_ball !== null) {
+      if (first_contact_ball.number !== next_target_ball) {
+        foul = true;
+      }
+    }
+  }
 
   if (state !== "game_over") {
     let reset_table = true;
@@ -443,32 +505,45 @@ function update() {
       }
     }
 
+    if (pool_ball_list[9].in_pocket) {
+      reset_table = true;
+    }
+
     if (reset_table) {
       state = "game_over";
       table_reset_timeout = setTimeout(() => {
         setup_table();
         table_reset_timeout = null;
-        state = "aim";
+        point_aim_cursor_at_next_target_ball();
+
       }, 5000);
     }
   }
 
-
   let new_table_settled = true;
-  if (state === "aim" || state === "set_shot_power" || state === "retrieve_cue_ball") {
-    pool_ball_list.every((ball, i) => {
-      if (ball.is_moving) {
-        new_table_settled = false;
-        return false;
-      }
-      return true;
-    });
-  } else {
-    new_table_settled = false;
-  }
+
+  pool_ball_list.every((ball, i) => {
+    if (ball.is_moving) {
+      new_table_settled = false;
+      return false;
+    }
+    return true;
+  });
 
   table_settled = new_table_settled;
 
+  if ((state === "shot_rolling") && table_settled) {
+    if (foul || first_contact_ball === null) {
+      state = "ball_in_hand";
+      ball_in_hand_type = "foul";
+    } else {
+      state = "aim";
+    }
+
+    foul = false;
+    refresh_next_target_ball();
+    point_aim_cursor_at_next_target_ball();
+  }
 }
 
 function step() {
@@ -544,17 +619,17 @@ function touch_click_end(e) {
         }
 
         cue_ball.start_skid(GRAVITY, mu_skidding);
-        aim_cursor.center =  table.center;
         shot_power = 0;
+        state = "shot_rolling";
+        first_contact_ball = null;
+        foul = false;
       }
-
-      state = "aim";
       return;
     }
 
     if (state === "ball_in_hand") {
       state = "aim";
-      aim_cursor.center =  table.center;
+      point_aim_cursor_at_next_target_ball();
       return;
     }
   }
@@ -584,13 +659,100 @@ function get_shot_power_scale() {
   return 1 - Math.cos(Math.PI / 2 * (shot_power / get_max_shot_power()));
 }
 
-function on_cursor_move(e) {
+function point_aim_cursor_at_next_target_ball() {
+  let to_target = cue_ball.center.to(pool_ball_list[next_target_ball].center);
+  aim_cursor.center = pool_ball_list[next_target_ball].center.add(to_target.flip().normalize().scale(cue_ball.radius * 2));
 
-  if (e.type === "touchmove" && e.touches.length > 1) {
-    console.log("multiple touches, should scroll");
-    return;
+  set_aim_cursor_at_collision();
+}
+
+function set_aim_cursor_at_collision() {
+  // find the distance to place the aim cursor
+
+  let new_aim_vect = cue_ball.center.to(aim_cursor.center).scale_to(table.major_dimension + table.minor_dimension);
+  let ball = null;
+  let shortest_distance = null;
+
+  for (let i = 1; i < pool_ball_list.length; i++) {
+    let otherball = pool_ball_list[i];
+    let to_other = cue_ball.center.to(otherball.center);
+    let forward = to_other.project(new_aim_vect);
+    let sideways = to_other.project(new_aim_vect.perpendicular_l);
+
+    if (forward.acute_with(new_aim_vect) && sideways.magnitude < cue_ball.radius + otherball.radius) {
+      let dist;
+      if (sideways.magnitude < 0.000001) {
+        dist = forward.magnitude - (cue_ball.radius + otherball.radius);
+      } else {
+        let a = sideways.magnitude / 2;
+        let theta = Math.acos(a / cue_ball.radius);
+        let o = a * Math.tan(theta);
+        if (a <= 0) {
+          o = cue_ball.radius;
+        }
+        dist = forward.magnitude - 2 * o;
+      }
+
+      if (shortest_distance === null || dist < shortest_distance) {
+        ball = otherball;
+        shortest_distance = dist;
+      }
+    }
   }
 
+
+  let bumper_distance = null;
+
+  if (aim_cursor.top < table.top) {
+    let dist = cue_ball.top - table.top;
+
+    let scale = (dist / new_aim_vect.project(Vector.up()).magnitude);
+    let vel_dist = new_aim_vect.scale(scale).magnitude;
+    if (bumper_distance === null || vel_dist < bumper_distance) {
+      bumper_distance = vel_dist;
+    }
+  }
+
+  if (aim_cursor.right > table.right) {
+    let dist = table.right - cue_ball.right;
+
+    let scale = (dist / new_aim_vect.project(Vector.right()).magnitude);
+    let vel_dist = new_aim_vect.scale(scale).magnitude;
+    if (bumper_distance === null || vel_dist < bumper_distance) {
+      bumper_distance = vel_dist;
+    }
+  }
+
+  if (aim_cursor.bottom > table.bottom) {
+    let dist = table.bottom - cue_ball.bottom;
+
+    let scale = (dist / new_aim_vect.project(Vector.down()).magnitude);
+    let vel_dist = new_aim_vect.scale(scale).magnitude;
+    if (bumper_distance === null || vel_dist < bumper_distance) {
+      bumper_distance = vel_dist;
+    }
+  }
+
+  if (aim_cursor.left < table.left) {
+    let dist = cue_ball.left - table.left;
+
+    let scale = (dist / new_aim_vect.project(Vector.left()).magnitude);
+    let vel_dist = new_aim_vect.scale(scale).magnitude;
+    if (bumper_distance === null || vel_dist < bumper_distance) {
+      bumper_distance = vel_dist;
+    }
+  }
+
+  if (bumper_distance !== null && (shortest_distance === null || bumper_distance < shortest_distance)) {
+    new_aim_vect = new_aim_vect.scale_to(bumper_distance);
+    aim_cursor.center = cue_ball.center.add(new_aim_vect);
+  } else {
+    new_aim_vect = new_aim_vect.scale_to(shortest_distance);
+    aim_cursor.center = cue_ball.center.add(new_aim_vect);
+  }
+}
+
+function on_cursor_move(e) {
   e.preventDefault();
 
   let change;
@@ -615,10 +777,24 @@ function on_cursor_move(e) {
     }
   }
 
-  if (state === "aim" || state === "ball_in_hand") {
-
+  if (state == "ball_in_hand") {
     if (dragging && mouse_down) {
       aim_cursor.center = aim_cursor.center.add(change);
+    }
+  }
+
+  if (state === "aim") {
+
+    if (dragging && mouse_down) {
+      let previous_vect = cue_ball.center.to(previous_mouse_position);
+      let current_vect = cue_ball.center.to(mouse_pos);
+      let aim_vect = cue_ball.center.to(aim_cursor.center);
+
+      let new_aim_vect = aim_vect.rotate(previous_vect.angle_between(current_vect)).normalize().scale(table.major_dimension + table.minor_dimension);
+
+      aim_cursor.center = cue_ball.center.add(new_aim_vect);
+
+      set_aim_cursor_at_collision();
     }
   }
 

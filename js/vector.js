@@ -1,6 +1,23 @@
 import * as utils from "./utils.js";
 
 export class Vector {
+
+  static up() {
+    return new Vector(0, -1);
+  }
+
+  static down() {
+    return new Vector(0, 1);
+  }
+
+  static left() {
+    return new Vector(-1, 0);
+  }
+
+  static right() {
+    return new Vector(1, 0);
+  }
+
   constructor() {
     if (arguments.length == 1) {
       this.coord = Array.from(arguments[0]);
@@ -70,6 +87,10 @@ export class Vector {
     return new Vector(to_return);
   }
 
+  scale_to(magnitude) {
+    return this.scale(magnitude / this.magnitude);
+  }
+
   normalize() {
     if (this.magnitude > 0) {
       return this.scale(1 / this.magnitude);
@@ -123,6 +144,27 @@ export class Vector {
   angle_to(other) {
     return other.subtract(this).angle;
   }
+
+  abs_angle_between(other) {
+    let h = this.magnitude;
+    let a = this.project(other).magnitude;
+    let o = this.project(other).subtract(this).magnitude;
+
+    return Math.asin(o / h);
+  }
+
+  angle_between(other) {
+    let theta = this.abs_angle_between(other);
+    if (this.rotate(theta).abs_angle_between(other) > theta) {
+      return -theta;
+    }
+    return theta;
+  }
+
+  rotate(theta) {
+    return new Vector(this.x * Math.cos(theta) - this.y * Math.sin(theta), this.x * Math.sin(theta) + this.y * Math.cos(theta));
+  }
+
 
   acute_with(other) {
     return this.dot(other) > 0;

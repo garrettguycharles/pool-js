@@ -374,6 +374,7 @@ export class Ball extends Rect {
     }
   }
 
+
   apply_friction(g, mu_rolling = 0.01, mu_skidding = 0.2) {
     let old_mag = this.velocity.magnitude;
     if (old_mag === 0) {
@@ -404,7 +405,7 @@ export class Ball extends Rect {
     }
     let to_root;
     if (this.skidding) {
-      to_root = old_rot * old_rot - 2 * mu_rolling * old_rot * g;
+      to_root = old_rot * old_rot - 2 * 0.005 * old_rot * g;
     } else {
       to_root = old_rot * old_rot - 2 * mu_skidding * old_rot * g;
     }

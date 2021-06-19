@@ -41,6 +41,6 @@ export class PoolBall extends Ball {
   }
 
   get["is_moving"]() {
-    return this.velocity.magnitude > 0.001;
+    return this.velocity.magnitude > 0.001 || this.rotation.magnitude > 0.001;
   }
 }

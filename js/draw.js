@@ -473,6 +473,20 @@ export class DrawTool {
     this.pool_stick(cue_ball_rect, aim_point, distance);
   }
 
+  diamond(center, rx, ry) {
+    this.ctx.beginPath();
+    this.move_to(center.add(Vector.left().scale(rx)).coord);
+    this.line_to(center.add(Vector.up().scale(ry)).coord);
+    this.line_to(center.add(Vector.right().scale(rx)).coord);
+    this.line_to(center.add(Vector.down().scale(ry)).coord);
+    this.ctx.closePath();
+    this.ctx.fillStyle = "#ebebeb";
+    this.ctx.strokeStyle = "#008e00";
+    this.ctx.lineWidth = rx / 3;
+    this.ctx.fill();
+    this.ctx.stroke();
+  }
+
   pool_table(screen, table, pockets_list, bumper_list, side_pocket_mouth_angle = 15) {
     let corner_pocket_mouth_angle = 45;
     let rail_thickness = (screen.w - table.w) / 2;
@@ -510,6 +524,68 @@ export class DrawTool {
 
     for (let i = 0; i < bumper_list.length; i++) {
       this.bumper(bumper_list[i]);
+    }
+
+    let diamond_height = table.major_dimension * 1 / 150;
+    let diamond_width = diamond_height * 4 / 7;
+
+    let rail_wood_center = bumper_thickness + (rail_thickness - bumper_thickness) / 2;
+    let horizontal_diamonds = [];
+    let vertical_diamonds = [];
+
+    if (table.h === table.minor_dimension) {
+      // horizontal table
+      horizontal_diamonds.push(table.midleft.add(Vector.left().scale(rail_wood_center)));
+      horizontal_diamonds.push(table.midleft.lerp_towards(table.topleft, 0.5).add(Vector.left().scale(rail_wood_center)));
+      horizontal_diamonds.push(table.midleft.lerp_towards(table.bottomleft, 0.5).add(Vector.left().scale(rail_wood_center)));
+
+      horizontal_diamonds.push(table.midright.add(Vector.right().scale(rail_wood_center)));
+      horizontal_diamonds.push(table.midright.lerp_towards(table.topright, 0.5).add(Vector.right().scale(rail_wood_center)));
+      horizontal_diamonds.push(table.midright.lerp_towards(table.bottomright, 0.5).add(Vector.right().scale(rail_wood_center)));
+
+      vertical_diamonds.push(table.midtop.lerp_towards(table.topleft, 0.75).add(Vector.up().scale(rail_wood_center)));
+      vertical_diamonds.push(table.midtop.lerp_towards(table.topleft, 0.5).add(Vector.up().scale(rail_wood_center)));
+      vertical_diamonds.push(table.midtop.lerp_towards(table.topleft, 0.25).add(Vector.up().scale(rail_wood_center)));
+      vertical_diamonds.push(table.midtop.lerp_towards(table.topright, 0.25).add(Vector.up().scale(rail_wood_center)));
+      vertical_diamonds.push(table.midtop.lerp_towards(table.topright, 0.5).add(Vector.up().scale(rail_wood_center)));
+      vertical_diamonds.push(table.midtop.lerp_towards(table.topright, 0.75).add(Vector.up().scale(rail_wood_center)));
+
+      vertical_diamonds.push(table.midbottom.lerp_towards(table.bottomright, 0.75).add(Vector.down().scale(rail_wood_center)));
+      vertical_diamonds.push(table.midbottom.lerp_towards(table.bottomright, 0.5).add(Vector.down().scale(rail_wood_center)));
+      vertical_diamonds.push(table.midbottom.lerp_towards(table.bottomright, 0.25).add(Vector.down().scale(rail_wood_center)));
+      vertical_diamonds.push(table.midbottom.lerp_towards(table.bottomleft, 0.25).add(Vector.down().scale(rail_wood_center)));
+      vertical_diamonds.push(table.midbottom.lerp_towards(table.bottomleft, 0.5).add(Vector.down().scale(rail_wood_center)));
+      vertical_diamonds.push(table.midbottom.lerp_towards(table.bottomleft, 0.75).add(Vector.down().scale(rail_wood_center)));
+    } else {
+      vertical_diamonds.push(table.midtop.add(Vector.up().scale(rail_wood_center)));
+      vertical_diamonds.push(table.midtop.lerp_towards(table.topleft, 0.5).add(Vector.up().scale(rail_wood_center)));
+      vertical_diamonds.push(table.midtop.lerp_towards(table.topright, 0.5).add(Vector.up().scale(rail_wood_center)));
+
+      vertical_diamonds.push(table.midbottom.add(Vector.down().scale(rail_wood_center)));
+      vertical_diamonds.push(table.midbottom.lerp_towards(table.bottomright, 0.5).add(Vector.down().scale(rail_wood_center)));
+      vertical_diamonds.push(table.midbottom.lerp_towards(table.bottomleft, 0.5).add(Vector.down().scale(rail_wood_center)));
+
+      horizontal_diamonds.push(table.midleft.lerp_towards(table.topleft, 0.75).add(Vector.left().scale(rail_wood_center)));
+      horizontal_diamonds.push(table.midleft.lerp_towards(table.topleft, 0.5).add(Vector.left().scale(rail_wood_center)));
+      horizontal_diamonds.push(table.midleft.lerp_towards(table.topleft, 0.25).add(Vector.left().scale(rail_wood_center)));
+      horizontal_diamonds.push(table.midleft.lerp_towards(table.bottomleft, 0.25).add(Vector.left().scale(rail_wood_center)));
+      horizontal_diamonds.push(table.midleft.lerp_towards(table.bottomleft, 0.5).add(Vector.left().scale(rail_wood_center)));
+      horizontal_diamonds.push(table.midleft.lerp_towards(table.bottomleft, 0.75).add(Vector.left().scale(rail_wood_center)));
+
+      horizontal_diamonds.push(table.midright.lerp_towards(table.bottomright, 0.75).add(Vector.right().scale(rail_wood_center)));
+      horizontal_diamonds.push(table.midright.lerp_towards(table.bottomright, 0.5).add(Vector.right().scale(rail_wood_center)));
+      horizontal_diamonds.push(table.midright.lerp_towards(table.bottomright, 0.25).add(Vector.right().scale(rail_wood_center)));
+      horizontal_diamonds.push(table.midright.lerp_towards(table.topright, 0.25).add(Vector.right().scale(rail_wood_center)));
+      horizontal_diamonds.push(table.midright.lerp_towards(table.topright, 0.5).add(Vector.right().scale(rail_wood_center)));
+      horizontal_diamonds.push(table.midright.lerp_towards(table.topright, 0.75).add(Vector.right().scale(rail_wood_center)));
+    }
+
+    for (let i = 0; i < horizontal_diamonds.length; i++) {
+      this.diamond(horizontal_diamonds[i], diamond_height, diamond_width);
+    }
+
+    for (let i = 0; i < vertical_diamonds.length; i++) {
+      this.diamond(vertical_diamonds[i], diamond_width, diamond_height);
     }
 
   }
